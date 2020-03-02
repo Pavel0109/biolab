@@ -1,15 +1,16 @@
 package main
 
 import (
+	"encoding/csv"
 	"encoding/xml"
 	"fmt"
 	"io"
 	"log"
 	"os"
-	"encoding/csv"
 )
 
 type NameAndSynonyms struct {
+	Accesid string
 	Name string
 	Synonyms []string
 }
@@ -39,7 +40,6 @@ func deleteDublicate(a string, b[]string) []string  {
 	return result
 }
 func main() {
-
 	//configurets := []string{"iupac_name", "average_molecular_weight", "status"}
 
 	xmlFile, err := os.Open("data/hmdb_metabolites.xml")
@@ -78,7 +78,18 @@ func main() {
 				}
 				level--
 				result[ResultLength-1].Name = buf
+
 			}
+			if tok.Name.Local == "accession" && level == 3 {
+				var buf string
+				if err := decoder.DecodeElement(&buf, &tok); err != nil {
+					fmt.Println("error", err)
+				}
+				level--
+				result[ResultLength-1].Accesid = buf
+
+			}
+
 			if tok.Name.Local == "synonyms" {
 				isinsyn = 1
 			}
@@ -98,20 +109,21 @@ func main() {
 			}
 		}
 	}
-	fmt.Println(result)
 
-	file, err := os.Create("main name and synonyms/result_name_synonyms.csv")
+
+	file, err := os.Create("name and synonyms/result_name_synonyms.csv")
 	checkError("Cannot create file", err)
 	defer file.Close()
 
 	writer := csv.NewWriter(file)
+	writer.Comma = ';'
 	defer writer.Flush()
 
 	//err = writer.Write(configurets)
 
 	checkError("Cannot write to file", err)
 	for _, current := range result {
-			err := writer.Write(append([]string{current.Name},current.Synonyms...))
+			err := writer.Write(append([]string{current.Accesid,current.Name},current.Synonyms...))
 			checkError("Cannot write to file", err)
 
 	}
